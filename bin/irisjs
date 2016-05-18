@@ -3,6 +3,7 @@
 var program = require('commander');
 var mkdirp = require('mkdirp');
 var prompt = require("prompt");
+var fs = require('fs');
 
 var pkg = require('../package.json');
 
@@ -12,22 +13,118 @@ program
   .version(version)
   .usage('[options] [dir]')
   .option('    --port <port>', '')
-  .option('    --dbhost <dbhost>', '')
-  .option('    --dbport <dbport>', '')
-  .option('    --dbname <dbname>', '')
-  .option('    --filesize <filesize>', '')
+  .option('    --dbhost <db_server>', '')
+  .option('    --dbport <db_port>', '')
+  .option('    --dbname <db_name>', '')
+  .option('    --max_file_size <max_file_size>', '')
   .option('    --sitepath <sitepath>', '')
   .parse(process.argv);
   
-var options = {};
-options.port = program.port;
-options.dbhost = program.dbhost;
-options.dbport = program.dbport;
-options.dbname = program.dbname;
-options.filesize = program.filesize;
-options.sitepath = program.sitepath;
+var options = {
+  "https": false,
+  "https_key": "",
+  "https_cert": "",
+};
+var properties = [];
+options.port = program.port ? program.port : 
+    properties.push({name:'port', warning:"Please enter port : ", required: true});
+options.dbhost = program.db_server ? program.db_server : 
+    properties.push({name:'db_server', warning:"Please enter db_server : ", required: true});
+options.dbport = program.db_port ? program.db_port : 
+    properties.push({name:'db_port', warning:"Please enter db_port : ", required: true});
+options.dbname = program.db_name ? program.db_name : 
+    properties.push({name:'db_name', warning:"Please enter db_name : ", required: true});
+options.filesize = program.max_file_size ? program.max_file_size : 
+    properties.push({name:'max_file_size', warning:"Please enter max_file_size : ", required: true});
+options.sitepath = program.sitePath ? program.sitePath : 
+    properties.push({name:'sitePath', warning:"Please enter sitePath : ", required: true});
 
-console.log(options);
-if(options == {}){
+
+if(properties.length < 6){
+    prompt.start();
+
+  prompt.get(properties, function (err, result) {
+    if (err) { return onErr(err); }
     
+    options = MergeRecursive(options, result);
+    
+    var destinationPath = program.args.shift() || '.';
+    console.log(destinationPath);
+    mkdir(destinationPath,function(){
+    
+      var pkg = {
+        dependencies: {
+            'irisjs': '*'
+        }
+      }
+     var index = "require('irisjs')("
+     + JSON.stringify(options, null, 2) 
+     + ");"
+     write(destinationPath + '/index.js', index);
+     write(destinationPath + '/package.json', JSON.stringify(pkg, null, 2));
+    
+
+      var prompt = launchedFromCmd() ? '>' : '$';
+      console.log();
+      console.log('   install dependencies:');
+      console.log('     %s cd %s && npm install', prompt, destinationPath);
+      console.log();
+      
+      var exec = require('child_process').exec;
+      var cmd = 'cd '+ destinationPath + ' && npm install';
+
+      exec(cmd, function(error, stdout, stderr) {
+         console.log("done");
+      });
+     
+});
+      
+    })
+  });
+
+  function onErr(err) {
+    console.log(err);
+    return 1;
+  }
+}
+
+function mkdir(path, fn) {
+  mkdirp(path, 0755, function(err){
+    if (err) throw err;
+    console.log('   \033[36mcreate\033[0m : ' + path);
+    fn && fn();
+  });
+};
+
+function launchedFromCmd() {
+  return process.platform === 'win32'
+    && process.env._ === undefined;
+};
+
+function write(path, str, mode) {
+  fs.writeFileSync(path, str, { mode: mode || 0666 });
+  console.log('   \x1b[36mcreate\x1b[0m : ' + path);
+}
+
+function MergeRecursive(obj1, obj2) {
+
+  for (var p in obj2) {
+    try {
+      // Property in destination object set; update its value.
+      if ( obj2[p].constructor==Object ) {
+        obj1[p] = MergeRecursive(obj1[p], obj2[p]);
+
+      } else {
+        obj1[p] = obj2[p];
+
+      }
+
+    } catch(e) {
+      // Property in destination object not set; create it and set its value.
+      obj1[p] = obj2[p];
+
+    }
+  }
+
+  return obj1;
 }
