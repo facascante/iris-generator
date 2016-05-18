@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var program = require('commander');
 var mkdirp = require('mkdirp');
 var prompt = require("prompt");

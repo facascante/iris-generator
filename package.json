@@ -10,7 +10,7 @@
   "main": "bin/irisjs",
   "preferGlobal": true,
   "bin": {
-    "express": "./bin/irisjs"
+    "irisjs": "./bin/irisjs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
