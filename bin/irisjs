@@ -76,8 +76,6 @@ if(properties.length < 6){
       exec(cmd, function(error, stdout, stderr) {
          console.log("done");
       });
-     
-});
       
     })
   });
